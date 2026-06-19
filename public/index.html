@@ -28,6 +28,50 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div class="intro-screen" data-intro-screen>
+      <div class="intro-screen__ambient" aria-hidden="true"></div>
+
+      <div class="intro-screen__controls">
+        <button
+          class="intro-screen__control"
+          type="button"
+          data-intro-audio-toggle
+          aria-pressed="true"
+        >
+          Sound ein
+        </button>
+        <button class="intro-screen__control intro-screen__control-skip" type="button" data-intro-skip>
+          Intro überspringen
+        </button>
+      </div>
+
+      <div class="intro-screen__center">
+        <p class="intro-screen__eyebrow">Mentaltraining · Klarheit · Performance</p>
+
+        <div class="intro-screen__stage" aria-hidden="true">
+          <div class="intro-screen__halo"></div>
+          <div class="intro-screen__wordmark-wrap">
+            <img
+              class="intro-screen__wordmark"
+              src="assets/images/trueformance-logo.png"
+              alt=""
+              width="726"
+              height="232"
+              decoding="async"
+              fetchpriority="high"
+            />
+            <span class="intro-screen__shine"></span>
+          </div>
+        </div>
+
+        <p class="intro-screen__tag">Mentale Stärke. Klare Richtung. Ruhige Präsenz.</p>
+      </div>
+
+      <div class="intro-screen__progress" aria-hidden="true">
+        <span></span>
+      </div>
+    </div>
+
     <div class="page-shell" id="top">
       <header class="site-header">
         <a class="brand" href="#top" aria-label="trueFormance Startseite">

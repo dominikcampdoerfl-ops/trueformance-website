@@ -4,9 +4,262 @@ const year = document.querySelector("#year");
 const revealElements = document.querySelectorAll(".reveal");
 const consentTriggers = document.querySelectorAll(".cookie-settings-trigger");
 const instagramShells = document.querySelectorAll(".instagram-shell");
+const introScreen = document.querySelector("[data-intro-screen]");
+const introSkipButton = document.querySelector("[data-intro-skip]");
+const introAudioToggle = document.querySelector("[data-intro-audio-toggle]");
 const CONSENT_STORAGE_KEY = "trueformance_cookie_preferences";
 const CONSENT_VERSION = "2026-06-19";
 let instagramScriptPromise;
+
+function createNoiseBuffer(context, duration = 1.35) {
+  const frameCount = Math.floor(context.sampleRate * duration);
+  const buffer = context.createBuffer(1, frameCount, context.sampleRate);
+  const channelData = buffer.getChannelData(0);
+
+  for (let index = 0; index < frameCount; index += 1) {
+    const fade = 1 - index / frameCount;
+    channelData[index] = (Math.random() * 2 - 1) * fade;
+  }
+
+  return buffer;
+}
+
+function connectWithOptionalPan(context, sourceNode, gainNode, destination, panValue = 0) {
+  sourceNode.connect(gainNode);
+
+  if ("createStereoPanner" in context) {
+    const panner = context.createStereoPanner();
+    panner.pan.value = panValue;
+    gainNode.connect(panner);
+    panner.connect(destination);
+    return;
+  }
+
+  gainNode.connect(destination);
+}
+
+function playIntroSound(context) {
+  const start = context.currentTime + 0.02;
+  const master = context.createGain();
+  master.gain.setValueAtTime(0.0001, start);
+  master.gain.exponentialRampToValueAtTime(0.24, start + 0.08);
+  master.gain.exponentialRampToValueAtTime(0.0001, start + 1.8);
+  master.connect(context.destination);
+
+  const lowPulse = context.createOscillator();
+  lowPulse.type = "triangle";
+  lowPulse.frequency.setValueAtTime(58, start);
+  lowPulse.frequency.exponentialRampToValueAtTime(41, start + 0.64);
+  const lowPulseGain = context.createGain();
+  lowPulseGain.gain.setValueAtTime(0.0001, start);
+  lowPulseGain.gain.exponentialRampToValueAtTime(0.72, start + 0.03);
+  lowPulseGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.72);
+  connectWithOptionalPan(context, lowPulse, lowPulseGain, master, -0.08);
+  lowPulse.start(start);
+  lowPulse.stop(start + 0.74);
+
+  const liftTone = context.createOscillator();
+  liftTone.type = "sawtooth";
+  liftTone.frequency.setValueAtTime(146, start + 0.04);
+  liftTone.frequency.exponentialRampToValueAtTime(236, start + 0.72);
+  const liftFilter = context.createBiquadFilter();
+  liftFilter.type = "lowpass";
+  liftFilter.frequency.setValueAtTime(720, start);
+  liftFilter.frequency.exponentialRampToValueAtTime(2600, start + 0.84);
+  const liftToneGain = context.createGain();
+  liftToneGain.gain.setValueAtTime(0.0001, start + 0.04);
+  liftToneGain.gain.exponentialRampToValueAtTime(0.14, start + 0.18);
+  liftToneGain.gain.exponentialRampToValueAtTime(0.0001, start + 1.04);
+  liftTone.connect(liftFilter);
+  connectWithOptionalPan(context, liftFilter, liftToneGain, master, 0.1);
+  liftTone.start(start + 0.04);
+  liftTone.stop(start + 1.06);
+
+  const shimmer = context.createOscillator();
+  shimmer.type = "sine";
+  shimmer.frequency.setValueAtTime(620, start + 0.58);
+  shimmer.frequency.exponentialRampToValueAtTime(960, start + 1.18);
+  const shimmerGain = context.createGain();
+  shimmerGain.gain.setValueAtTime(0.0001, start + 0.56);
+  shimmerGain.gain.exponentialRampToValueAtTime(0.18, start + 0.72);
+  shimmerGain.gain.exponentialRampToValueAtTime(0.0001, start + 1.38);
+  connectWithOptionalPan(context, shimmer, shimmerGain, master, -0.18);
+  shimmer.start(start + 0.56);
+  shimmer.stop(start + 1.4);
+
+  const noise = context.createBufferSource();
+  noise.buffer = createNoiseBuffer(context);
+  const noiseFilter = context.createBiquadFilter();
+  noiseFilter.type = "bandpass";
+  noiseFilter.frequency.setValueAtTime(1200, start);
+  noiseFilter.frequency.exponentialRampToValueAtTime(2400, start + 0.94);
+  noiseFilter.Q.value = 0.75;
+  const noiseGain = context.createGain();
+  noiseGain.gain.setValueAtTime(0.0001, start);
+  noiseGain.gain.exponentialRampToValueAtTime(0.1, start + 0.16);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, start + 1.08);
+  noise.connect(noiseFilter);
+  connectWithOptionalPan(context, noiseFilter, noiseGain, master, 0.22);
+  noise.start(start);
+  noise.stop(start + 1.1);
+}
+
+function initIntro() {
+  if (!introScreen) {
+    return;
+  }
+
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const introDuration = prefersReducedMotion ? 180 : 3200;
+  const introExitDuration = prefersReducedMotion ? 40 : 900;
+  let audioContext = null;
+  let audioEnabled = !prefersReducedMotion;
+  let audioPlayed = false;
+  let audioPendingGesture = false;
+  let introFinished = false;
+  let finishTimer = null;
+  let cleanupTimer = null;
+
+  document.body.classList.add("intro-ready", "intro-active");
+
+  function updateAudioButton() {
+    if (!introAudioToggle) {
+      return;
+    }
+
+    if (!AudioContextClass || prefersReducedMotion) {
+      introAudioToggle.textContent = "Sound aus";
+      introAudioToggle.dataset.state = "off";
+      introAudioToggle.setAttribute("aria-pressed", "false");
+      introAudioToggle.disabled = true;
+      return;
+    }
+
+    introAudioToggle.disabled = false;
+    introAudioToggle.setAttribute("aria-pressed", String(audioEnabled));
+
+    if (!audioEnabled) {
+      introAudioToggle.textContent = "Sound aus";
+      introAudioToggle.dataset.state = "off";
+      return;
+    }
+
+    if (audioPendingGesture) {
+      introAudioToggle.textContent = "Sound starten";
+      introAudioToggle.dataset.state = "pending";
+      return;
+    }
+
+    introAudioToggle.textContent = audioPlayed ? "Sound aktiv" : "Sound ein";
+    introAudioToggle.dataset.state = "on";
+  }
+
+  function removeUnlockListeners() {
+    window.removeEventListener("pointerdown", handleUnlockAudio);
+    window.removeEventListener("keydown", handleUnlockAudio);
+  }
+
+  function teardownIntro() {
+    introScreen.remove();
+    document.body.classList.remove("intro-ready", "intro-complete");
+  }
+
+  function finishIntro() {
+    if (introFinished) {
+      return;
+    }
+
+    introFinished = true;
+    window.clearTimeout(finishTimer);
+    removeUnlockListeners();
+    document.body.classList.remove("intro-active");
+    document.body.classList.add("intro-complete");
+    window.dispatchEvent(new CustomEvent("trueformance:intro-finished"));
+    cleanupTimer = window.setTimeout(teardownIntro, introExitDuration);
+  }
+
+  async function attemptIntroAudio(forceResume = false) {
+    if (!audioEnabled || audioPlayed || !AudioContextClass || prefersReducedMotion) {
+      return;
+    }
+
+    try {
+      if (!audioContext) {
+        audioContext = new AudioContextClass();
+      }
+
+      if (audioContext.state !== "running") {
+        if (!forceResume) {
+          audioPendingGesture = true;
+          updateAudioButton();
+          return;
+        }
+
+        await audioContext.resume();
+      }
+
+      if (audioContext.state !== "running") {
+        audioPendingGesture = true;
+        updateAudioButton();
+        return;
+      }
+
+      playIntroSound(audioContext);
+      audioPlayed = true;
+      audioPendingGesture = false;
+      updateAudioButton();
+    } catch {
+      audioPendingGesture = true;
+      updateAudioButton();
+    }
+  }
+
+  async function handleUnlockAudio() {
+    if (audioPlayed || !audioEnabled) {
+      return;
+    }
+
+    await attemptIntroAudio(true);
+
+    if (audioPlayed || !audioEnabled) {
+      removeUnlockListeners();
+    }
+  }
+
+  introSkipButton?.addEventListener("click", finishIntro);
+
+  introAudioToggle?.addEventListener("click", async () => {
+    if (!AudioContextClass || prefersReducedMotion) {
+      return;
+    }
+
+    if (audioEnabled) {
+      audioEnabled = false;
+      audioPendingGesture = false;
+      if (audioContext) {
+        audioContext.suspend().catch(() => {});
+      }
+      updateAudioButton();
+      return;
+    }
+
+    audioEnabled = true;
+    updateAudioButton();
+    await attemptIntroAudio(true);
+  });
+
+  updateAudioButton();
+  finishTimer = window.setTimeout(finishIntro, introDuration);
+
+  if (!prefersReducedMotion && AudioContextClass) {
+    window.addEventListener("pointerdown", handleUnlockAudio, { passive: true });
+    window.addEventListener("keydown", handleUnlockAudio);
+    attemptIntroAudio(false);
+  }
+}
+
+initIntro();
 
 if (year) {
   year.textContent = new Date().getFullYear();
@@ -360,7 +613,13 @@ if (existingConsent) {
   applyConsentState(existingConsent);
 } else {
   applyConsentState(null);
-  openConsentDialog();
+  if (introScreen) {
+    window.addEventListener("trueformance:intro-finished", () => {
+      openConsentDialog();
+    }, { once: true });
+  } else {
+    openConsentDialog();
+  }
 }
 
 consentTriggers.forEach((trigger) => {

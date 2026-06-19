@@ -14,7 +14,7 @@
     />
     <link rel="canonical" href="https://trueformance.de/" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="trueFormance | Systematisches Mentaltraining" />
+    <meta property="og:title" content="trueFormance | Systemisches Mentaltraining" />
     <meta
       property="og:description"
       content="Mentaltraining Spitzensport, Mentaltraining in Nürnberg und München sowie Hypnose Spitzensport mit klarer Haltung, moderner Ruhe und echter Praxisnähe."
@@ -28,6 +28,50 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div class="intro-screen" data-intro-screen>
+      <div class="intro-screen__ambient" aria-hidden="true"></div>
+
+      <div class="intro-screen__controls">
+        <button
+          class="intro-screen__control"
+          type="button"
+          data-intro-audio-toggle
+          aria-pressed="true"
+        >
+          Sound ein
+        </button>
+        <button class="intro-screen__control intro-screen__control-skip" type="button" data-intro-skip>
+          Intro überspringen
+        </button>
+      </div>
+
+      <div class="intro-screen__center">
+        <p class="intro-screen__eyebrow">Mentaltraining · Klarheit · Performance</p>
+
+        <div class="intro-screen__stage" aria-hidden="true">
+          <div class="intro-screen__halo"></div>
+          <div class="intro-screen__wordmark-wrap">
+            <img
+              class="intro-screen__wordmark"
+              src="assets/images/trueformance-logo.png"
+              alt=""
+              width="726"
+              height="232"
+              decoding="async"
+              fetchpriority="high"
+            />
+            <span class="intro-screen__shine"></span>
+          </div>
+        </div>
+
+        <p class="intro-screen__tag">Mentale Stärke. Klare Richtung. Ruhige Präsenz.</p>
+      </div>
+
+      <div class="intro-screen__progress" aria-hidden="true">
+        <span></span>
+      </div>
+    </div>
+
     <div class="page-shell" id="top">
       <header class="site-header">
         <a class="brand" href="#top" aria-label="trueFormance Startseite">
@@ -58,7 +102,7 @@
             <div class="site-nav__intro">
               <p class="site-nav__eyebrow">Navigation</p>
               <p class="site-nav__lead">
-                Systematisches Mentaltraining für Leistung, Klarheit und nachhaltige Entwicklung.
+                Systemisches Mentaltraining für Leistung, Klarheit und nachhaltige Entwicklung.
               </p>
             </div>
 
@@ -152,20 +196,23 @@
               alt=""
               width="1774"
               height="887"
+              loading="eager"
+              fetchpriority="high"
               decoding="async"
             />
+            <div class="hero-scene-tag">trueFormance · Systemisches Mentaltraining</div>
           </div>
 
           <div class="hero-copy">
             <p class="eyebrow">Mentaltraining Spitzensport · Nürnberg · München</p>
             <h1>
-              <span class="hero-line hero-line-wide">Systematisches Mentaltraining.</span>
+              <span class="hero-line hero-line-wide">Systemisches Mentaltraining.</span>
               <span class="hero-line">Klare Wege.</span>
               <span class="hero-line">Gutes Gefühl.</span>
             </h1>
             <p class="hero-text">
               trueFormance begleitet Menschen, die unter Druck ruhig bleiben
-              und Leistung bewusst abrufen wollen. Mit systematischem
+              und Leistung bewusst abrufen wollen. Mit systemischem
               Mentaltraining für Spitzensport und klarer Begleitung in
               Nürnberg und München.
             </p>
