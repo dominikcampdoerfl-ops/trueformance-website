@@ -8,6 +8,7 @@ const introScreen = document.querySelector("[data-intro-screen]");
 const introSkipButton = document.querySelector("[data-intro-skip]");
 const introAudioToggle = document.querySelector("[data-intro-audio-toggle]");
 const introMediaAudio = document.querySelector("[data-intro-audio]");
+const introAudioStatus = document.querySelector("[data-intro-audio-status]");
 const CONSENT_STORAGE_KEY = "trueformance_cookie_preferences";
 const CONSENT_VERSION = "2026-06-19";
 let instagramScriptPromise;
@@ -97,10 +98,13 @@ function initIntro() {
     }
 
     if (!introHasPlayableAudio || prefersReducedMotion) {
-      introAudioToggle.textContent = "Sound aus";
+      introAudioToggle.textContent = "Ton aus";
       introAudioToggle.dataset.state = "off";
       introAudioToggle.setAttribute("aria-pressed", "false");
       introAudioToggle.disabled = true;
+      if (introAudioStatus) {
+        introAudioStatus.textContent = "Dieses Intro läuft auf diesem Gerät ohne Ton.";
+      }
       return;
     }
 
@@ -108,25 +112,39 @@ function initIntro() {
     introAudioToggle.setAttribute("aria-pressed", String(audioEnabled));
 
     if (!audioEnabled) {
-      introAudioToggle.textContent = "Sound aus";
+      introAudioToggle.textContent = "Ton einschalten";
       introAudioToggle.dataset.state = "off";
+      if (introAudioStatus) {
+        introAudioStatus.textContent = "Ton für dieses Intro manuell deaktiviert.";
+      }
       return;
     }
 
     if (audioPendingGesture) {
-      introAudioToggle.textContent = "Sound starten";
+      introAudioToggle.textContent = "Ton aus";
       introAudioToggle.dataset.state = "pending";
+      if (introAudioStatus) {
+        introAudioStatus.textContent =
+          "Ton wird automatisch versucht. Falls du auf dem iPhone nichts hörst, Lautlos deaktivieren oder einmal tippen.";
+      }
       return;
     }
 
     if (introMediaAudio && !introMediaAudio.paused) {
-      introAudioToggle.textContent = "Sound aktiv";
+      introAudioToggle.textContent = "Ton aus";
       introAudioToggle.dataset.state = "on";
+      if (introAudioStatus) {
+        introAudioStatus.textContent = "Ton läuft automatisch mit.";
+      }
       return;
     }
 
-    introAudioToggle.textContent = "Sound ein";
+    introAudioToggle.textContent = "Ton aus";
     introAudioToggle.dataset.state = "idle";
+    if (introAudioStatus) {
+      introAudioStatus.textContent =
+        "Ton startet automatisch. Falls du auf dem iPhone nichts hörst, Lautlos deaktivieren.";
+    }
   }
 
   function removeUnlockListeners() {
