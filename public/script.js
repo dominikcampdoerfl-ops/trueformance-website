@@ -7,128 +7,96 @@ const instagramShells = document.querySelectorAll(".instagram-shell");
 const introScreen = document.querySelector("[data-intro-screen]");
 const introSkipButton = document.querySelector("[data-intro-skip]");
 const introAudioToggle = document.querySelector("[data-intro-audio-toggle]");
+const introMediaAudio = document.querySelector("[data-intro-audio]");
 const CONSENT_STORAGE_KEY = "trueformance_cookie_preferences";
 const CONSENT_VERSION = "2026-06-19";
 let instagramScriptPromise;
-
-function createNoiseBuffer(context, duration = 1.35) {
-  const frameCount = Math.floor(context.sampleRate * duration);
-  const buffer = context.createBuffer(1, frameCount, context.sampleRate);
-  const channelData = buffer.getChannelData(0);
-
-  for (let index = 0; index < frameCount; index += 1) {
-    const fade = 1 - index / frameCount;
-    channelData[index] = (Math.random() * 2 - 1) * fade;
-  }
-
-  return buffer;
-}
-
-function connectWithOptionalPan(context, sourceNode, gainNode, destination, panValue = 0) {
-  sourceNode.connect(gainNode);
-
-  if ("createStereoPanner" in context) {
-    const panner = context.createStereoPanner();
-    panner.pan.value = panValue;
-    gainNode.connect(panner);
-    panner.connect(destination);
-    return;
-  }
-
-  gainNode.connect(destination);
-}
-
-function playIntroSound(context) {
-  const start = context.currentTime + 0.02;
-  const master = context.createGain();
-  master.gain.setValueAtTime(0.0001, start);
-  master.gain.exponentialRampToValueAtTime(0.24, start + 0.08);
-  master.gain.exponentialRampToValueAtTime(0.0001, start + 1.8);
-  master.connect(context.destination);
-
-  const lowPulse = context.createOscillator();
-  lowPulse.type = "triangle";
-  lowPulse.frequency.setValueAtTime(58, start);
-  lowPulse.frequency.exponentialRampToValueAtTime(41, start + 0.64);
-  const lowPulseGain = context.createGain();
-  lowPulseGain.gain.setValueAtTime(0.0001, start);
-  lowPulseGain.gain.exponentialRampToValueAtTime(0.72, start + 0.03);
-  lowPulseGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.72);
-  connectWithOptionalPan(context, lowPulse, lowPulseGain, master, -0.08);
-  lowPulse.start(start);
-  lowPulse.stop(start + 0.74);
-
-  const liftTone = context.createOscillator();
-  liftTone.type = "sawtooth";
-  liftTone.frequency.setValueAtTime(146, start + 0.04);
-  liftTone.frequency.exponentialRampToValueAtTime(236, start + 0.72);
-  const liftFilter = context.createBiquadFilter();
-  liftFilter.type = "lowpass";
-  liftFilter.frequency.setValueAtTime(720, start);
-  liftFilter.frequency.exponentialRampToValueAtTime(2600, start + 0.84);
-  const liftToneGain = context.createGain();
-  liftToneGain.gain.setValueAtTime(0.0001, start + 0.04);
-  liftToneGain.gain.exponentialRampToValueAtTime(0.14, start + 0.18);
-  liftToneGain.gain.exponentialRampToValueAtTime(0.0001, start + 1.04);
-  liftTone.connect(liftFilter);
-  connectWithOptionalPan(context, liftFilter, liftToneGain, master, 0.1);
-  liftTone.start(start + 0.04);
-  liftTone.stop(start + 1.06);
-
-  const shimmer = context.createOscillator();
-  shimmer.type = "sine";
-  shimmer.frequency.setValueAtTime(620, start + 0.58);
-  shimmer.frequency.exponentialRampToValueAtTime(960, start + 1.18);
-  const shimmerGain = context.createGain();
-  shimmerGain.gain.setValueAtTime(0.0001, start + 0.56);
-  shimmerGain.gain.exponentialRampToValueAtTime(0.18, start + 0.72);
-  shimmerGain.gain.exponentialRampToValueAtTime(0.0001, start + 1.38);
-  connectWithOptionalPan(context, shimmer, shimmerGain, master, -0.18);
-  shimmer.start(start + 0.56);
-  shimmer.stop(start + 1.4);
-
-  const noise = context.createBufferSource();
-  noise.buffer = createNoiseBuffer(context);
-  const noiseFilter = context.createBiquadFilter();
-  noiseFilter.type = "bandpass";
-  noiseFilter.frequency.setValueAtTime(1200, start);
-  noiseFilter.frequency.exponentialRampToValueAtTime(2400, start + 0.94);
-  noiseFilter.Q.value = 0.75;
-  const noiseGain = context.createGain();
-  noiseGain.gain.setValueAtTime(0.0001, start);
-  noiseGain.gain.exponentialRampToValueAtTime(0.1, start + 0.16);
-  noiseGain.gain.exponentialRampToValueAtTime(0.0001, start + 1.08);
-  noise.connect(noiseFilter);
-  connectWithOptionalPan(context, noiseFilter, noiseGain, master, 0.22);
-  noise.start(start);
-  noise.stop(start + 1.1);
-}
 
 function initIntro() {
   if (!introScreen) {
     return;
   }
 
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const introDuration = prefersReducedMotion ? 180 : 3200;
+  const introHasPlayableAudio =
+    !!introMediaAudio &&
+    typeof introMediaAudio.canPlayType === "function" &&
+    introMediaAudio.canPlayType("audio/mp4") !== "";
+  let introDuration = prefersReducedMotion ? 220 : 5520;
   const introExitDuration = prefersReducedMotion ? 40 : 900;
-  let audioContext = null;
-  let audioEnabled = !prefersReducedMotion;
-  let audioPlayed = false;
+  let audioEnabled = !prefersReducedMotion && introHasPlayableAudio;
   let audioPendingGesture = false;
   let introFinished = false;
   let finishTimer = null;
   let cleanupTimer = null;
+  const introStartedAt = window.performance.now();
 
   document.body.classList.add("intro-ready", "intro-active");
+
+  if (introMediaAudio) {
+    introMediaAudio.autoplay = audioEnabled;
+    introMediaAudio.preload = "auto";
+    introMediaAudio.playsInline = true;
+    introMediaAudio.muted = false;
+    introMediaAudio.volume = 1;
+  }
+
+  function getIntroElapsedMs() {
+    return Math.max(0, window.performance.now() - introStartedAt);
+  }
+
+  function syncIntroProgressDuration() {
+    introScreen.style.setProperty(
+      "--intro-progress-duration",
+      `${Math.max(introDuration - 180, 1200)}ms`
+    );
+  }
+
+  function stopIntroAudio(reset = false) {
+    if (!introMediaAudio) {
+      return;
+    }
+
+    introMediaAudio.pause();
+
+    if (reset) {
+      try {
+        introMediaAudio.currentTime = 0;
+      } catch {
+        // Ignore reset errors from browsers during teardown.
+      }
+    }
+  }
+
+  function alignAudioToIntroTimeline() {
+    if (!introMediaAudio) {
+      return;
+    }
+
+    const elapsedSeconds = getIntroElapsedMs() / 1000;
+    const durationSeconds =
+      Number.isFinite(introMediaAudio.duration) && introMediaAudio.duration > 0
+        ? introMediaAudio.duration
+        : null;
+    const targetTime = durationSeconds
+      ? Math.min(elapsedSeconds, Math.max(durationSeconds - 0.05, 0))
+      : elapsedSeconds;
+
+    try {
+      if (Math.abs(introMediaAudio.currentTime - targetTime) > 0.18) {
+        introMediaAudio.currentTime = targetTime;
+      }
+    } catch {
+      // Ignore currentTime sync errors until media is ready.
+    }
+  }
 
   function updateAudioButton() {
     if (!introAudioToggle) {
       return;
     }
 
-    if (!AudioContextClass || prefersReducedMotion) {
+    if (!introHasPlayableAudio || prefersReducedMotion) {
       introAudioToggle.textContent = "Sound aus";
       introAudioToggle.dataset.state = "off";
       introAudioToggle.setAttribute("aria-pressed", "false");
@@ -151,8 +119,14 @@ function initIntro() {
       return;
     }
 
-    introAudioToggle.textContent = audioPlayed ? "Sound aktiv" : "Sound ein";
-    introAudioToggle.dataset.state = "on";
+    if (introMediaAudio && !introMediaAudio.paused) {
+      introAudioToggle.textContent = "Sound aktiv";
+      introAudioToggle.dataset.state = "on";
+      return;
+    }
+
+    introAudioToggle.textContent = "Sound ein";
+    introAudioToggle.dataset.state = "idle";
   }
 
   function removeUnlockListeners() {
@@ -161,6 +135,8 @@ function initIntro() {
   }
 
   function teardownIntro() {
+    stopIntroAudio(true);
+    introScreen.style.removeProperty("--intro-progress-duration");
     introScreen.remove();
     document.body.classList.remove("intro-ready", "intro-complete");
   }
@@ -172,57 +148,71 @@ function initIntro() {
 
     introFinished = true;
     window.clearTimeout(finishTimer);
+    window.clearTimeout(cleanupTimer);
     removeUnlockListeners();
+    stopIntroAudio(true);
     document.body.classList.remove("intro-active");
     document.body.classList.add("intro-complete");
     window.dispatchEvent(new CustomEvent("trueformance:intro-finished"));
     cleanupTimer = window.setTimeout(teardownIntro, introExitDuration);
   }
 
-  async function attemptIntroAudio(forceResume = false) {
-    if (!audioEnabled || audioPlayed || !AudioContextClass || prefersReducedMotion) {
+  function scheduleFinish(delay = Math.max(introDuration - getIntroElapsedMs(), 0)) {
+    window.clearTimeout(finishTimer);
+    finishTimer = window.setTimeout(finishIntro, delay);
+  }
+
+  function syncIntroDurationFromAudio() {
+    if (!introMediaAudio) {
+      return;
+    }
+
+    if (Number.isFinite(introMediaAudio.duration) && introMediaAudio.duration > 0) {
+      introDuration = Math.round(introMediaAudio.duration * 1000 + 260);
+      syncIntroProgressDuration();
+
+      if (introFinished) {
+        return;
+      }
+
+      if (getIntroElapsedMs() >= introDuration) {
+        finishIntro();
+        return;
+      }
+
+      scheduleFinish();
+    }
+  }
+
+  async function attemptIntroAudio() {
+    if (!audioEnabled || !introHasPlayableAudio || !introMediaAudio || introFinished) {
       return;
     }
 
     try {
-      if (!audioContext) {
-        audioContext = new AudioContextClass();
+      alignAudioToIntroTimeline();
+      const playAttempt = introMediaAudio.play();
+
+      if (playAttempt && typeof playAttempt.then === "function") {
+        await playAttempt;
       }
 
-      if (audioContext.state !== "running") {
-        if (!forceResume) {
-          audioPendingGesture = true;
-          updateAudioButton();
-          return;
-        }
-
-        await audioContext.resume();
-      }
-
-      if (audioContext.state !== "running") {
-        audioPendingGesture = true;
-        updateAudioButton();
-        return;
-      }
-
-      playIntroSound(audioContext);
-      audioPlayed = true;
       audioPendingGesture = false;
-      updateAudioButton();
     } catch {
       audioPendingGesture = true;
-      updateAudioButton();
     }
+
+    updateAudioButton();
   }
 
   async function handleUnlockAudio() {
-    if (audioPlayed || !audioEnabled) {
+    if (!audioEnabled) {
       return;
     }
 
-    await attemptIntroAudio(true);
+    await attemptIntroAudio();
 
-    if (audioPlayed || !audioEnabled) {
+    if ((introMediaAudio && !introMediaAudio.paused) || !audioEnabled) {
       removeUnlockListeners();
     }
   }
@@ -230,32 +220,40 @@ function initIntro() {
   introSkipButton?.addEventListener("click", finishIntro);
 
   introAudioToggle?.addEventListener("click", async () => {
-    if (!AudioContextClass || prefersReducedMotion) {
+    if (!introHasPlayableAudio || prefersReducedMotion || !introMediaAudio) {
       return;
     }
 
     if (audioEnabled) {
       audioEnabled = false;
       audioPendingGesture = false;
-      if (audioContext) {
-        audioContext.suspend().catch(() => {});
-      }
+      stopIntroAudio(false);
       updateAudioButton();
       return;
     }
 
     audioEnabled = true;
     updateAudioButton();
-    await attemptIntroAudio(true);
+    await attemptIntroAudio();
   });
 
-  updateAudioButton();
-  finishTimer = window.setTimeout(finishIntro, introDuration);
+  introMediaAudio?.addEventListener("loadedmetadata", syncIntroDurationFromAudio);
+  introMediaAudio?.addEventListener("durationchange", syncIntroDurationFromAudio);
+  introMediaAudio?.addEventListener("canplay", () => {
+    if (audioEnabled && introMediaAudio.paused) {
+      attemptIntroAudio();
+    }
+  });
+  introMediaAudio?.addEventListener("ended", finishIntro);
 
-  if (!prefersReducedMotion && AudioContextClass) {
+  syncIntroProgressDuration();
+  updateAudioButton();
+  scheduleFinish();
+
+  if (!prefersReducedMotion && introHasPlayableAudio) {
     window.addEventListener("pointerdown", handleUnlockAudio, { passive: true });
     window.addEventListener("keydown", handleUnlockAudio);
-    attemptIntroAudio(false);
+    attemptIntroAudio();
   }
 }
 
