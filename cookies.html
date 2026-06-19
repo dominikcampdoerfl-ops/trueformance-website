@@ -38,11 +38,79 @@
           <span></span>
         </button>
 
-        <nav class="site-nav" id="site-nav">
-          <a href="index.html">Startseite</a>
-          <a href="impressum.html">Impressum</a>
-          <a href="datenschutz.html">Datenschutz</a>
-          <a href="cookies.html" aria-current="page">Cookies</a>
+        <nav class="site-nav" id="site-nav" aria-label="Hauptnavigation">
+          <div class="site-nav__backdrop" aria-hidden="true"></div>
+          <div class="site-nav__panel">
+            <div class="site-nav__intro">
+              <p class="site-nav__eyebrow">Navigation</p>
+              <p class="site-nav__lead">
+                trueFormance, Rechtliches und schnelle Wege zu den wichtigsten Seiten.
+              </p>
+            </div>
+
+            <div class="site-nav__links">
+              <a class="site-nav__link" href="index.html">
+                <span class="site-nav__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M3 10.5 12 3l9 7.5" />
+                    <path d="M5.25 9.75V21h13.5V9.75" />
+                  </svg>
+                </span>
+                <span class="site-nav__copy">
+                  <span class="site-nav__title">Startseite</span>
+                  <span class="site-nav__meta">Zurück zur Hauptseite von trueFormance</span>
+                </span>
+              </a>
+
+              <a class="site-nav__link" href="impressum.html">
+                <span class="site-nav__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M7 3.5h7l4 4V20.5H7z" />
+                    <path d="M14 3.5v4h4" />
+                    <path d="M10 12h4M10 16h4" />
+                  </svg>
+                </span>
+                <span class="site-nav__copy">
+                  <span class="site-nav__title">Impressum</span>
+                  <span class="site-nav__meta">Anbieterkennzeichnung und Kontaktdaten</span>
+                </span>
+              </a>
+
+              <a class="site-nav__link" href="datenschutz.html">
+                <span class="site-nav__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 3.5 19 6v5c0 4.25-2.5 7.5-7 9.5-4.5-2-7-5.25-7-9.5V6l7-2.5Z" />
+                    <path d="m9.5 12 1.5 1.5 3.5-3.5" />
+                  </svg>
+                </span>
+                <span class="site-nav__copy">
+                  <span class="site-nav__title">Datenschutz</span>
+                  <span class="site-nav__meta">Datenverarbeitung und Betroffenenrechte</span>
+                </span>
+              </a>
+
+              <a class="site-nav__link" href="cookies.html" aria-current="page">
+                <span class="site-nav__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 4a8 8 0 1 0 8 8c-2.9.2-5.2-2.1-5-5-1.2.5-2.7.2-3.7-.9-.4-.5-.9-1.3-1.3-2.1Z" />
+                    <circle cx="9" cy="12" r="1" />
+                    <circle cx="13.5" cy="15.5" r="1" />
+                    <circle cx="15" cy="10" r="1" />
+                  </svg>
+                </span>
+                <span class="site-nav__copy">
+                  <span class="site-nav__title">Cookies</span>
+                  <span class="site-nav__meta">Einwilligung und Speichertechniken</span>
+                </span>
+              </a>
+            </div>
+
+            <div class="site-nav__footer" aria-hidden="true">
+              <span>Recht</span>
+              <span>Datenschutz</span>
+              <span>Transparenz</span>
+            </div>
+          </div>
         </nav>
       </header>
 
